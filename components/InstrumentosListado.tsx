@@ -45,7 +45,10 @@ export default function InstrumentosListado({ created }: Props) {
           <span className="brand-mark" aria-hidden="true">✦</span>
           <span>AER<span className="brand-light">O</span>REGISTRO</span>
         </Link>
-        <span className="topbar-caption">CONTROL DE INSTRUMENTOS</span>
+        <div className="topbar-links">
+          <Link className="history-link" href="/movimientos">Historial</Link>
+          <span className="topbar-caption">CONTROL DE INSTRUMENTOS</span>
+        </div>
       </header>
 
       <section className="hero">

@@ -79,32 +79,47 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     await ensureDatabase();
-    const [existing] = await getSql()`SELECT foto_url FROM instrumentos WHERE id = ${id}`;
-    if (!existing) {
+    const result = await getSql().begin(async (transaction) => {
+      const [existing] = await transaction`
+        SELECT id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
+        FROM instrumentos
+        WHERE id = ${id}
+        FOR UPDATE
+      `;
+      if (!existing) return null;
+
+      const [updated] = fotoUrl === undefined
+        ? await transaction`
+            UPDATE instrumentos
+            SET persona_carga = ${parsed.data.persona_carga},
+                nombre_instrumento = ${parsed.data.nombre_instrumento},
+                numero_parte = ${parsed.data.numero_parte},
+                numero_serie = ${parsed.data.numero_serie}
+            WHERE id = ${id}
+            RETURNING id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
+          `
+        : await transaction`
+            UPDATE instrumentos
+            SET persona_carga = ${parsed.data.persona_carga},
+                nombre_instrumento = ${parsed.data.nombre_instrumento},
+                numero_parte = ${parsed.data.numero_parte},
+                numero_serie = ${parsed.data.numero_serie},
+                foto_url = ${fotoUrl}
+            WHERE id = ${id}
+            RETURNING id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
+          `;
+
+      await transaction`
+        INSERT INTO instrumento_movimientos (instrumento_id, accion, datos_anteriores, datos_nuevos)
+        VALUES (${id}, 'editado', ${JSON.stringify(existing)}::jsonb, ${JSON.stringify(updated)}::jsonb)
+      `;
+      return { existing, updated };
+    });
+    if (!result) {
       if (uploadedUrl) await del(uploadedUrl);
       return errorResponse("No se encontró el instrumento solicitado.", 404);
     }
-
-    const [instrumento] = fotoUrl === undefined
-      ? await getSql()`
-          UPDATE instrumentos
-          SET persona_carga = ${parsed.data.persona_carga},
-              nombre_instrumento = ${parsed.data.nombre_instrumento},
-              numero_parte = ${parsed.data.numero_parte},
-              numero_serie = ${parsed.data.numero_serie}
-          WHERE id = ${id}
-          RETURNING id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
-        `
-      : await getSql()`
-          UPDATE instrumentos
-          SET persona_carga = ${parsed.data.persona_carga},
-              nombre_instrumento = ${parsed.data.nombre_instrumento},
-              numero_parte = ${parsed.data.numero_parte},
-              numero_serie = ${parsed.data.numero_serie},
-              foto_url = ${fotoUrl}
-          WHERE id = ${id}
-          RETURNING id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
-        `;
+    const { existing, updated: instrumento } = result;
 
     if (uploadedUrl && existing.foto_url) {
       try {
@@ -135,11 +150,22 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 
   try {
     await ensureDatabase();
-    const [instrumento] = await getSql()`
-      DELETE FROM instrumentos
-      WHERE id = ${id}
-      RETURNING id, foto_url
-    `;
+    const instrumento = await getSql().begin(async (transaction) => {
+      const [existing] = await transaction`
+        SELECT id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
+        FROM instrumentos
+        WHERE id = ${id}
+        FOR UPDATE
+      `;
+      if (!existing) return null;
+
+      await transaction`
+        INSERT INTO instrumento_movimientos (instrumento_id, accion, datos_anteriores)
+        VALUES (${id}, 'eliminado', ${JSON.stringify(existing)}::jsonb)
+      `;
+      await transaction`DELETE FROM instrumentos WHERE id = ${id}`;
+      return existing;
+    });
     if (!instrumento) {
       return errorResponse("No se encontró el instrumento solicitado.", 404);
     }

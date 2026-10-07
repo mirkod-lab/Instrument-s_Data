@@ -16,17 +16,33 @@ export async function ensureDatabase(): Promise<void> {
   });
 
   if (!schemaReady) {
-    schemaReady = sql`
-      CREATE TABLE IF NOT EXISTS instrumentos (
-        id SERIAL PRIMARY KEY,
-        persona_carga VARCHAR(160) NOT NULL,
-        nombre_instrumento VARCHAR(200) NOT NULL,
-        numero_parte VARCHAR(120) NOT NULL,
-        numero_serie VARCHAR(120) NOT NULL,
-        foto_url TEXT,
-        fecha_carga TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `.then(() => undefined);
+    schemaReady = sql.begin(async (transaction) => {
+      await transaction`
+        CREATE TABLE IF NOT EXISTS instrumentos (
+          id SERIAL PRIMARY KEY,
+          persona_carga VARCHAR(160) NOT NULL,
+          nombre_instrumento VARCHAR(200) NOT NULL,
+          numero_parte VARCHAR(120) NOT NULL,
+          numero_serie VARCHAR(120) NOT NULL,
+          foto_url TEXT,
+          fecha_carga TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `;
+      await transaction`
+        CREATE TABLE IF NOT EXISTS instrumento_movimientos (
+          id BIGSERIAL PRIMARY KEY,
+          instrumento_id INTEGER NOT NULL,
+          accion VARCHAR(10) NOT NULL CHECK (accion IN ('creado', 'editado', 'eliminado')),
+          datos_anteriores JSONB,
+          datos_nuevos JSONB,
+          fecha TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `;
+      await transaction`
+        CREATE INDEX IF NOT EXISTS instrumento_movimientos_fecha_id_idx
+        ON instrumento_movimientos (id DESC)
+      `;
+    }).then(() => undefined);
     schemaReady = schemaReady.catch((error: unknown) => {
       schemaReady = undefined;
       throw error;

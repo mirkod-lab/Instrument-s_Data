@@ -74,11 +74,18 @@ export async function POST(request: NextRequest) {
     }
 
     await ensureDatabase();
-    const [instrumento] = await getSql()`
-      INSERT INTO instrumentos (persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url)
-      VALUES (${parsed.data.persona_carga}, ${parsed.data.nombre_instrumento}, ${parsed.data.numero_parte}, ${parsed.data.numero_serie}, ${fotoUrl})
-      RETURNING id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
-    `;
+    const [instrumento] = await getSql().begin(async (transaction) => {
+      const [created] = await transaction`
+        INSERT INTO instrumentos (persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url)
+        VALUES (${parsed.data.persona_carga}, ${parsed.data.nombre_instrumento}, ${parsed.data.numero_parte}, ${parsed.data.numero_serie}, ${fotoUrl})
+        RETURNING id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
+      `;
+      await transaction`
+        INSERT INTO instrumento_movimientos (instrumento_id, accion, datos_nuevos)
+        VALUES (${created.id}, 'creado', ${JSON.stringify(created)}::jsonb)
+      `;
+      return [created];
+    });
 
     return NextResponse.json(instrumento, { status: 201 });
   } catch (error) {

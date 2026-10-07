@@ -1,6 +1,6 @@
 # Registro de Instrumentos Aeronáuticos
 
-Aplicación web para registrar, consultar, buscar, editar y eliminar instrumentos aeronáuticos. Está construida con Next.js y preparada para desplegar en Vercel. Los registros se guardan en Neon/Postgres y las fotografías en Vercel Blob.
+Aplicación web para registrar, consultar, buscar, editar y eliminar instrumentos aeronáuticos, con historial permanente de movimientos. Está construida con Next.js y preparada para desplegar en Vercel. Los registros se guardan en Neon/Postgres y las fotografías en Vercel Blob.
 
 ## Requisitos
 
@@ -23,7 +23,7 @@ npm install
 3. En el panel de Vercel, crea un almacén desde **Storage → Create → Blob** y conéctalo al proyecto. Vercel configura `BLOB_READ_WRITE_TOKEN` en el entorno conectado.
 4. La aplicación crea automáticamente la tabla `instrumentos` la primera vez que se consulta la API; no hace falta ejecutar migraciones manuales.
 
-La tabla incluye `id` autoincremental, `persona_carga`, `nombre_instrumento`, `numero_parte`, `numero_serie`, `foto_url` y `fecha_carga`.
+La tabla incluye `id` autoincremental, `persona_carga`, `nombre_instrumento`, `numero_parte`, `numero_serie`, `foto_url` y `fecha_carga`. También se crea `instrumento_movimientos`, que mantiene una copia de los datos antes/después de cada creación, edición o eliminación, incluso tras borrar el instrumento. Los registros anteriores a activar el historial no se pueden reconstruir.
 
 ## 3. Variables de entorno
 
@@ -71,5 +71,8 @@ La base de datos Neon debe permitir conexiones desde el despliegue de Vercel. Co
 | POST | `/api/instrumentos` | Crear registro con `multipart/form-data`; foto opcional en el campo `foto`. |
 | PUT | `/api/instrumentos/[id]` | Actualizar los campos y, opcionalmente, reemplazar la foto con `multipart/form-data`. |
 | DELETE | `/api/instrumentos/[id]` | Eliminar registro y su foto asociada. |
+| GET | `/api/movimientos` | Consultar el historial de movimientos, con paginación mediante `?before=`. |
 
 Los campos de texto son obligatorios. La fotografía es opcional; se aceptan JPEG, PNG, GIF y WebP de hasta 4 MB. Las entradas se validan en el servidor y las consultas SQL usan parámetros.
+
+La interfaz de historial está disponible en `/movimientos`. Se registran los cambios de datos, pero la aplicación no identifica a la persona que realiza cada operación porque todavía no tiene autenticación.
