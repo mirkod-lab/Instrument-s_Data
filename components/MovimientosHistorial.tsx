@@ -40,6 +40,31 @@ const actions: Record<Movimiento["accion"], string> = {
   eliminado: "Instrumento eliminado",
 };
 
+function normalizeSnapshot(value: unknown): InstrumentoSnapshot | null {
+  if (typeof value === "string") {
+    try {
+      return normalizeSnapshot(JSON.parse(value) as unknown);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+
+  const record = value as Record<string, unknown>;
+  const readText = (...keys: string[]) => {
+    const field = keys.map((key) => record[key]).find((candidate) => candidate !== undefined && candidate !== null);
+    return typeof field === "string" || typeof field === "number" ? String(field) : "";
+  };
+
+  return {
+    persona_carga: readText("persona_carga", "personaCarga"),
+    nombre_instrumento: readText("nombre_instrumento", "nombreInstrumento"),
+    numero_parte: readText("numero_parte", "numeroParte"),
+    numero_serie: readText("numero_serie", "numeroSerie"),
+    foto_url: readText("foto_url", "fotoUrl") || null,
+  };
+}
+
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("es-AR", {
     dateStyle: "medium",
@@ -53,15 +78,14 @@ function describeChange(previous: InstrumentoSnapshot | null, current: Instrumen
 
   if (!previous || !current) {
     return (Object.keys(labels).filter((key) => key !== "foto_url") as (keyof InstrumentoSnapshot)[])
-      .filter((key) => key !== "foto_url" || values[key])
-      .map((key) => ({ label: labels[key], value: values[key] || "Sin fotografía" }));
+      .map((key) => ({ label: labels[key], value: values[key] || "—" }));
   }
 
   return (Object.keys(labels).filter((key) => key !== "foto_url") as (keyof InstrumentoSnapshot)[])
     .filter((key) => previous[key] !== current[key])
     .map((key) => ({
       label: labels[key],
-      value: `${previous[key] || "Sin fotografía"} → ${current[key] || "Sin fotografía"}`,
+      value: `${previous[key] || "—"} → ${current[key] || "—"}`,
     }));
 }
 
@@ -80,7 +104,12 @@ export default function MovimientosHistorial() {
       const response = await fetch(`/api/movimientos${before ? `?before=${before}` : ""}`);
       const data = await response.json() as HistoryResponse & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "No se pudo consultar el historial.");
-      setItems((current) => before ? [...current, ...data.movimientos] : data.movimientos);
+      const movimientos = data.movimientos.map((movement) => ({
+        ...movement,
+        datos_anteriores: normalizeSnapshot(movement.datos_anteriores),
+        datos_nuevos: normalizeSnapshot(movement.datos_nuevos),
+      }));
+      setItems((current) => before ? [...current, ...movimientos] : movimientos);
       setCursor(data.siguienteCursor);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "No se pudo consultar el historial.");
