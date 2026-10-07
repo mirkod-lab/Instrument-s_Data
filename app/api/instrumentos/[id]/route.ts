@@ -119,7 +119,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       if (uploadedUrl) await del(uploadedUrl);
       return errorResponse("No se encontró el instrumento solicitado.", 404);
     }
-    const { existing, updated: instrumento } = result;
+    const { updated: instrumento } = result;
 
     return NextResponse.json(instrumento);
   } catch (error) {
