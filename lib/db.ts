@@ -42,6 +42,10 @@ export async function ensureDatabase(): Promise<void> {
         CREATE INDEX IF NOT EXISTS instrumento_movimientos_fecha_id_idx
         ON instrumento_movimientos (id DESC)
       `;
+      await transaction`
+        ALTER TABLE instrumento_movimientos
+        ADD COLUMN IF NOT EXISTS usuario VARCHAR(160)
+      `;
     }).then(() => undefined);
     schemaReady = schemaReady.catch((error: unknown) => {
       schemaReady = undefined;

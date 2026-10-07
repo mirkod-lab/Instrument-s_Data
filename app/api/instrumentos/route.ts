@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
         RETURNING id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
       `;
       await transaction`
-        INSERT INTO instrumento_movimientos (instrumento_id, accion, datos_nuevos)
-        VALUES (${created.id}, 'creado', ${JSON.stringify(created)}::jsonb)
+        INSERT INTO instrumento_movimientos (instrumento_id, accion, datos_nuevos, usuario)
+        VALUES (${created.id}, 'creado', ${JSON.stringify(created)}::jsonb, ${process.env.AUTH_USERNAME ?? null})
       `;
       return [created];
     });

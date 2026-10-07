@@ -15,14 +15,14 @@ export async function GET(request: NextRequest) {
     await ensureDatabase();
     const rows = cursor
       ? await getSql()`
-          SELECT id, instrumento_id, accion, datos_anteriores, datos_nuevos, fecha
+          SELECT id, instrumento_id, accion, datos_anteriores, datos_nuevos, fecha, usuario
           FROM instrumento_movimientos
           WHERE id < ${cursor}
           ORDER BY id DESC
           LIMIT 51
         `
       : await getSql()`
-          SELECT id, instrumento_id, accion, datos_anteriores, datos_nuevos, fecha
+          SELECT id, instrumento_id, accion, datos_anteriores, datos_nuevos, fecha, usuario
           FROM instrumento_movimientos
           ORDER BY id DESC
           LIMIT 51

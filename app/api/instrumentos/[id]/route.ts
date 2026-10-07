@@ -110,8 +110,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           `;
 
       await transaction`
-        INSERT INTO instrumento_movimientos (instrumento_id, accion, datos_anteriores, datos_nuevos)
-        VALUES (${id}, 'editado', ${JSON.stringify(existing)}::jsonb, ${JSON.stringify(updated)}::jsonb)
+        INSERT INTO instrumento_movimientos (instrumento_id, accion, datos_anteriores, datos_nuevos, usuario)
+        VALUES (${id}, 'editado', ${JSON.stringify(existing)}::jsonb, ${JSON.stringify(updated)}::jsonb, ${process.env.AUTH_USERNAME ?? null})
       `;
       return { existing, updated };
     });
@@ -121,13 +121,6 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
     const { existing, updated: instrumento } = result;
 
-    if (uploadedUrl && existing.foto_url) {
-      try {
-        await del(existing.foto_url);
-      } catch (error) {
-        console.error("No se pudo eliminar la fotografía anterior:", error);
-      }
-    }
     return NextResponse.json(instrumento);
   } catch (error) {
     console.error("Error al actualizar instrumento:", error);
@@ -160,8 +153,8 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       if (!existing) return null;
 
       await transaction`
-        INSERT INTO instrumento_movimientos (instrumento_id, accion, datos_anteriores)
-        VALUES (${id}, 'eliminado', ${JSON.stringify(existing)}::jsonb)
+        INSERT INTO instrumento_movimientos (instrumento_id, accion, datos_anteriores, usuario)
+        VALUES (${id}, 'eliminado', ${JSON.stringify(existing)}::jsonb, ${process.env.AUTH_USERNAME ?? null})
       `;
       await transaction`DELETE FROM instrumentos WHERE id = ${id}`;
       return existing;
@@ -170,13 +163,6 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       return errorResponse("No se encontró el instrumento solicitado.", 404);
     }
 
-    if (instrumento.foto_url) {
-      try {
-        await del(instrumento.foto_url);
-      } catch (error) {
-        console.error("No se pudo eliminar la fotografía asociada:", error);
-      }
-    }
     return NextResponse.json({ message: "Instrumento eliminado correctamente." });
   } catch (error) {
     console.error("Error al eliminar instrumento:", error);

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import CerrarSesion from "@/components/CerrarSesion";
 import { Instrumento } from "@/lib/instrumentos";
 type Props = { created: boolean };
 
@@ -48,6 +49,7 @@ export default function InstrumentosListado({ created }: Props) {
         <div className="topbar-links">
           <Link className="history-link" href="/movimientos">Historial</Link>
           <span className="topbar-caption">CONTROL DE INSTRUMENTOS</span>
+          <CerrarSesion />
         </div>
       </header>
 

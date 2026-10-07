@@ -18,6 +18,7 @@ type Movimiento = {
   datos_anteriores: InstrumentoSnapshot | null;
   datos_nuevos: InstrumentoSnapshot | null;
   fecha: string;
+  usuario: string | null;
 };
 
 type HistoryResponse = {
@@ -51,12 +52,12 @@ function describeChange(previous: InstrumentoSnapshot | null, current: Instrumen
   if (!values) return [];
 
   if (!previous || !current) {
-    return (Object.keys(labels) as (keyof InstrumentoSnapshot)[])
+    return (Object.keys(labels).filter((key) => key !== "foto_url") as (keyof InstrumentoSnapshot)[])
       .filter((key) => key !== "foto_url" || values[key])
       .map((key) => ({ label: labels[key], value: values[key] || "Sin fotografía" }));
   }
 
-  return (Object.keys(labels) as (keyof InstrumentoSnapshot)[])
+  return (Object.keys(labels).filter((key) => key !== "foto_url") as (keyof InstrumentoSnapshot)[])
     .filter((key) => previous[key] !== current[key])
     .map((key) => ({
       label: labels[key],
@@ -115,6 +116,10 @@ export default function MovimientosHistorial() {
         <section className="history-list" aria-label="Movimientos recientes">
           {items.map((movement) => {
             const changed = describeChange(movement.datos_anteriores, movement.datos_nuevos);
+            const photoEntries = [
+              { label: "Anterior", url: movement.datos_anteriores?.foto_url ?? null },
+              { label: "Actual", url: movement.datos_nuevos?.foto_url ?? null },
+            ].filter((photo, index, all) => photo.url && all.findIndex((entry) => entry.url === photo.url) === index);
             return (
               <article className={`panel history-card history-${movement.accion}`} key={movement.id}>
                 <div className="history-card-heading">
@@ -125,6 +130,7 @@ export default function MovimientosHistorial() {
                   {movement.datos_nuevos?.nombre_instrumento ?? movement.datos_anteriores?.nombre_instrumento ?? "Instrumento"}
                   <span> · ID #{movement.instrumento_id}</span>
                 </h2>
+                {movement.usuario && <p className="history-actor">Registrado por: <strong>{movement.usuario}</strong></p>}
                 <dl className="history-values">
                   {changed.map(({ label, value }) => (
                     <div key={label}>
@@ -133,6 +139,16 @@ export default function MovimientosHistorial() {
                     </div>
                   ))}
                 </dl>
+                {photoEntries.length > 0 && (
+                  <div className="history-photos" aria-label="Fotografías del movimiento">
+                    {photoEntries.map((photo) => (
+                      <div className="history-photo" key={photo.url}>
+                        <img src={photo.url!} alt={`Foto ${photo.label.toLowerCase()} del instrumento`} />
+                        <span>{photo.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </article>
             );
           })}
@@ -144,7 +160,7 @@ export default function MovimientosHistorial() {
         </section>
       )}
 
-      <p className="history-note">El historial conserva los cambios realizados desde que se habilitó esta función. No identifica quién hizo cada cambio porque la aplicación aún no tiene inicio de sesión.</p>
+      <p className="history-note">El historial conserva los movimientos y sus fotografías. Los movimientos anteriores al inicio del historial o al acceso con sesión pueden no incluir usuario o imágenes disponibles.</p>
     </main>
   );
 }
