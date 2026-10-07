@@ -34,7 +34,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 ```
 
-`DATABASE_URL` es obligatoria. `BLOB_READ_WRITE_TOKEN` es necesaria para cargar, reemplazar o eliminar fotografías. Si el proyecto usa fotos, mantén ambas variables configuradas en todos los entornos. No publiques `.env.local` ni compartas estos valores.
+`DATABASE_URL` es obligatoria. Para fotos, Vercel puede autenticar el SDK con OIDC al conectar el almacén al proyecto; fuera de Vercel, incluida la ejecución local, configura `BLOB_READ_WRITE_TOKEN` o usa `vercel env pull` para obtener las variables de desarrollo. No publiques `.env.local` ni compartas estos valores.
 
 ## 4. Ejecutar localmente
 
@@ -42,7 +42,7 @@ BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000). Para cargar fotos en desarrollo, genera un token de lectura y escritura de Blob desde el panel de Vercel y colócalo en `.env.local`.
+Abre [http://localhost:3000](http://localhost:3000). Para cargar fotos en desarrollo, coloca `BLOB_READ_WRITE_TOKEN` del almacén público en `.env.local`, o vincula el proyecto con Vercel CLI y ejecuta `vercel env pull`.
 
 ## 5. Conectar el proyecto con Vercel
 

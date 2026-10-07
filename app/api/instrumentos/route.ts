@@ -64,9 +64,6 @@ export async function POST(request: NextRequest) {
       if (imageError) {
         return errorResponse(imageError, 400);
       }
-      if (!process.env.BLOB_READ_WRITE_TOKEN) {
-        return errorResponse("Falta configurar BLOB_READ_WRITE_TOKEN para subir fotografías.", 500);
-      }
       const blob = await put(candidate.name, candidate, {
         access: "public",
         addRandomSuffix: true,
@@ -86,7 +83,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(instrumento, { status: 201 });
   } catch (error) {
     console.error("Error al crear instrumento:", error);
-    if (uploadedUrl && process.env.BLOB_READ_WRITE_TOKEN) {
+    if (uploadedUrl) {
       try {
         const { del } = await import("@vercel/blob");
         await del(uploadedUrl);
@@ -94,6 +91,6 @@ export async function POST(request: NextRequest) {
         console.error("No se pudo limpiar la fotografía tras fallar la creación:", cleanupError);
       }
     }
-    return errorResponse("No se pudo guardar el instrumento. Revisa la conexión a la base de datos y el almacenamiento de fotos.", 500);
+    return errorResponse("No se pudo guardar el instrumento. Comprueba la conexión con Neon y que Vercel Blob esté conectado al proyecto; para desarrollo local configura BLOB_READ_WRITE_TOKEN.", 500);
   }
 }

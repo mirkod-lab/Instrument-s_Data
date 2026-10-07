@@ -69,9 +69,6 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       if (imageError) {
         return errorResponse(imageError, 400);
       }
-      if (!process.env.BLOB_READ_WRITE_TOKEN) {
-        return errorResponse("Falta configurar BLOB_READ_WRITE_TOKEN para subir fotografías.", 500);
-      }
       const blob = await put(candidate.name, candidate, {
         access: "public",
         addRandomSuffix: true,
@@ -84,7 +81,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     await ensureDatabase();
     const [existing] = await getSql()`SELECT foto_url FROM instrumentos WHERE id = ${id}`;
     if (!existing) {
-      if (uploadedUrl && process.env.BLOB_READ_WRITE_TOKEN) await del(uploadedUrl);
+      if (uploadedUrl) await del(uploadedUrl);
       return errorResponse("No se encontró el instrumento solicitado.", 404);
     }
 
@@ -109,7 +106,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           RETURNING id, persona_carga, nombre_instrumento, numero_parte, numero_serie, foto_url, fecha_carga
         `;
 
-    if (uploadedUrl && existing.foto_url && process.env.BLOB_READ_WRITE_TOKEN) {
+    if (uploadedUrl && existing.foto_url) {
       try {
         await del(existing.foto_url);
       } catch (error) {
@@ -119,7 +116,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json(instrumento);
   } catch (error) {
     console.error("Error al actualizar instrumento:", error);
-    if (uploadedUrl && process.env.BLOB_READ_WRITE_TOKEN) {
+    if (uploadedUrl) {
       try {
         await del(uploadedUrl);
       } catch (cleanupError) {
@@ -147,7 +144,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       return errorResponse("No se encontró el instrumento solicitado.", 404);
     }
 
-    if (instrumento.foto_url && process.env.BLOB_READ_WRITE_TOKEN) {
+    if (instrumento.foto_url) {
       try {
         await del(instrumento.foto_url);
       } catch (error) {
